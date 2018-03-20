@@ -29,8 +29,35 @@ object Main extends SimpleSwingApplication{
   }
 
   def onPaint(g: Graphics2D): Unit ={
-    g setColor bluishSilver
-    g drawString (ui.last,20,20)
+
+    val view = ui.view
+
+    def buildRect(pos: (Int,Int)): Rectangle = new Rectangle(pos._1 * (blockSize + blockMargin),blockSize,blockMargin)
+
+    def drawEmptyGrid: Unit ={
+      g setColor bluishLighterGray
+      for{
+        x <- 0 to view.gridSize_1 - 1
+        y <- 0 to view.gridSize_2 - 2
+        val pos = (x,y)
+      } g draw buildRect(pos)
+    }
+
+    def drawBlocks: Unit ={
+      g setColor bluishEvenLighter
+      view.blocks foreach {b => g fill buildRect(b.pos)}
+    }
+
+    def drawCurrent: Unit ={
+      g setColor bluishSilver
+      view.current foreach {b => g fill buildRect(b.pos)}
+    }
+
+    drawEmptyGrid
+    drawBlocks
+    drawCurrent
+    /*g setColor bluishSilver
+    g drawString (ui.last,20,20)*///TODO: no more needed
   }
 
   override def top = new MainFrame{
