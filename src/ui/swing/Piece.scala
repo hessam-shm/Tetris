@@ -9,6 +9,14 @@ case class Piece(pos: (Double,Double), kind: PieceKind, locals: Seq[(Double,Doub
   }
 
   def moveBy(delta: (Double,Double)): Piece = copy(pos = (pos._1 + delta._1, pos._2 + delta._2))
+
+  def rotateBy(theta: Double): Piece = {
+    val c = math.cos(theta)
+    val s = math.sin(theta)
+    def roundToHalf(v: (Double,Double)): (Double,Double) =
+      (math.round(v._1 * 2.0) * 0.5,math.round(v._2 * 2.0) * 0.5)
+    copy(locals = locals map {case (x,y) => (x*c - y*s, x*s + y*c)} map roundToHalf)
+  }
 }
 
 case object Piece{
