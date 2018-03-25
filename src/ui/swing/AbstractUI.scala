@@ -1,6 +1,10 @@
 package ui
 
+import java.awt.event.ActionEvent
+
 import ui.swing.{Block, GameView, Stage}
+import java.{util => ju}
+import javax.swing.AbstractAction
 
 /**
   * Created by Hessam Shafiei Moqaddam on 3/19/18.
@@ -10,6 +14,16 @@ class AbstractUI {
   private[this] val stage = new Stage((10,20))
 
   private[this] var lastKey: String = ""
+
+  private[this] val timer = new ju.Timer
+  timer.scheduleAtFixedRate(new ju.TimerTask {
+    override def run {state = tick(state)}
+  },0,1000)
+
+  val timer = new SwingTimer(100, new AbstractAction() {
+    override def actionPerformed(e: ActionEvent): Unit = {repaint}
+  })
+  timer.start
 
   def left(): Unit ={
     stage.moveLeft()
@@ -21,7 +35,7 @@ class AbstractUI {
     lastKey = "up"
   }
   def down(): Unit ={
-    lastKey = "down"
+    state = tick(state)
   }
   def space(): Unit ={
     lastKey = "space"

@@ -1,5 +1,7 @@
 package ui.swing
 
+import scala.annotation.tailrec
+
 /**
   * Created by Hessam Shafiei Moqaddam on 3/20/18.
   */
@@ -12,7 +14,10 @@ class Stage(size: (Int,Int)) {
   def moveLeft() = transit(_.moveBy(-1.0,0.0))
   def moveRight() = transit(_.moveBy(1.0,0.0))
   def rotateCW() = transit(_.rotateBy(-math.Pi/2.0))
-  val tick = transit (_.moveBy(0.0,-1.0),spawn)
+  val tick = transit (_.moveBy(0.0,-1.0),Function.chain(clearFullRow :: spawn :: Nil))
+
+  val drop: GameState => GameState = (s0: GameState) =>
+    Function.chain((Nil padTo(s0.gridSize._2, transit {_.moveBy(0.0,-1.0)})) ++ List(tick))(s0)
 
   def newState(blocks: Seq[Block]): GameState = {
     val size = (10,20)
@@ -37,11 +42,30 @@ class Stage(size: (Int,Int)) {
     else None
   }
 
-  private[this] def spawn(s: GameState): GameState = {
+  /*private[this] def spawn(s: GameState): GameState = {
     def dropOffPos = (s.gridSize._1 / 2.0,s.gridSize._2 - 3.0)
     val p = Piece(dropOffPos,TKind)
     s.copy(blocks = s.blocks ++ p.current, currentPiece = p)
+  }*/
+
+  private[this] lazy val spawn: GameState => GameState = (s: GameState) => {
+    def dropOffPos = (s.gridSize._1 / 2.0, s.gridSize._2 - 3.0)
+    val next = Piece((2,1),s.kinds.head)
+    val p = s.nextPiece.copy(pos = dropOffPos)
+    s.copy(blocks = s.blocks ++ p.current, currentPiece = p, nextPiece = next, kinds = s.kinds.tail)
   }
+
+  private[this] lazy val clearFullRow: GameState => GameState = (s0: GameState) => {
+      def isFullRow(i: Int, s: GameState): Boolean = (s.blocks filter {_.pos._2 == i} size) == s.gridSize._1
+      @tailrec def tryRow(i: Int, s: GameState): GameState =
+      if(i < 0) s
+    else if(isFullRow(i,s))
+      tryRow(i-1,s.copy(blocks = (s.blocks filter {_.pos._2 < i}) ++
+      (s.blocks filter {_.pos._2 > i} map {b => b.copy(pos = (b.pos._1,b.pos._2-1))})))
+    else tryRow(i-1,s)
+      tryRow(s0.gridSize._2-1,s0)
+  }
+
 
   /*private def transformPiece(trans: Piece => Piece): this.type = {
     validate(trans(currentPiece),

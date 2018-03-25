@@ -28,9 +28,16 @@ object Main extends SimpleSwingApplication{
     case _ =>
   }
 
+  private[this] def randomStream(random: util.Random): Stream[PieceKind] =
+    PieceKind(random.nextInt % 7) #:: randomStream(random)
+
   def onPaint(g: Graphics2D): Unit ={
 
     val view = ui.view
+    drawBorad(g,(0,0),view.gridSize,view.blocks,view.current)
+    drawBoard(g,(12*(blockSize+blockMargin),0),view.minGridSize,view.next,Nil)
+
+    //TODO:extract the rest of onpaint method to drawBoard method
 
     def buildRect(pos: (Int,Int)): Rectangle = new Rectangle(pos._1 * (blockSize + blockMargin),blockSize,blockMargin)
 
