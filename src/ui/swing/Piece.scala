@@ -1,7 +1,5 @@
 package ui.swing
 
-import ui.swing.PieceKind.IKind
-
 /**
   * Created by Hessam Shafiei Moqaddam on 3/20/18.
   */

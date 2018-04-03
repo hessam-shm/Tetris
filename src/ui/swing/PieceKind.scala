@@ -6,16 +6,23 @@ import ui.swing.PieceKind.{IKind, JKind, ZKind}
   * Created by Hessam Shafiei Moqaddam on 3/19/18.
   */
 sealed trait PieceKind {
-
-  case object IKind extends PieceKind
-  case object JKind extends PieceKind
-  case object LKind extends PieceKind
-  case object OKind extends PieceKind
-  case object SKind extends PieceKind
-  case object TKind extends PieceKind
-  case object ZKind extends PieceKind
+  def toInt: Int
 }
 
+case object IKind extends PieceKind {
+  override def toInt: Int = 0}
+case object JKind extends PieceKind {
+  override def toInt: Int = 1}
+case object LKind extends PieceKind {
+  override def toInt: Int = 2}
+case object OKind extends PieceKind {
+  override def toInt: Int = 3}
+case object SKind extends PieceKind {
+  override def toInt: Int = 4}
+case object TKind extends PieceKind {
+  override def toInt: Int = 5}
+case object ZKind extends PieceKind {
+  override def toInt: Int = 6}
 case object PieceKind {
   def apply(x: Int): PieceKind = x match {
     case 0 => IKind
@@ -27,3 +34,8 @@ case object PieceKind {
     case _ => ZKind
   }
 }
+
+sealed trait GameStatus
+case object ActiveStatus extends GameStatus
+case object GameOver extends GameStatus
+case object Victory extends GameStatus

@@ -2,50 +2,55 @@ package ui
 
 import java.awt.event.ActionEvent
 
-import ui.swing.{Block, GameView, Stage}
+import ui.swing._
 import java.{util => ju}
 import javax.swing.AbstractAction
+
+import akka.actor.{ActorSystem, Props}
+import akka.util.Timeout
+import ui.swing.PieceKind.TKind
+
+import scala.concurrent.Await
+import scala.util.Random
 
 /**
   * Created by Hessam Shafiei Moqaddam on 3/19/18.
   */
 class AbstractUI {
 
+  implicit val timeout = Timeout(1 second)
+
   private[this] val stage = new Stage((10,20))
 
   private[this] var lastKey: String = ""
 
-  private[this] val timer = new ju.Timer
-  timer.scheduleAtFixedRate(new ju.TimerTask {
-    override def run {state = tick(state)}
-  },0,1000)
+  private[this] val initialState = Stage.newState(Block(0,0),TKind) :: Nil, randomStream(new scala.util.Random))
+  private[this] val system = ActorSystem("TetrisSystem")
+  private[this] val playerActor = system.actorOf(Props(new StageActor(initialState)), name = "playerActor")
+  private[this] val timer = system.scheduler.schedule(0 millisecond, 1000 millisecond, playerActor,Tick)
+  private[this] def randomStream(random: Random): Stream[PieceKind] = PieceKind(random.nextInt % 7) #:: randomStream(random)
 
-  val timer = new SwingTimer(100, new AbstractAction() {
-    override def actionPerformed(e: ActionEvent): Unit = {repaint}
-  })
-  timer.start
+
+  private[this] var state = newState()
 
   def left(): Unit ={
-    stage.moveLeft()
+    playerActor ! MoveLeft
   }
   def right(): Unit ={
-    stage.moveRight()
+    playerActor ! MoveRight
   }
   def up(): Unit ={
-    lastKey = "up"
+    playerActor ! RotateCW
   }
   def down(): Unit ={
-    state = tick(state)
+    playerActor ! Tick
   }
   def space(): Unit ={
-    lastKey = "space"
+    playerActor ! Drop
   }
+
+  def view: GameView = Await.result((playerActor ? View).mapTo[GameView],timeout.duration)
 
   def last: String = lastKey
 
-  def view: GameView = stage.view
-
-  /*def view: GameView = GameView(Seq(Block((5,5),TKind),Block((6,5),TKind),Block((7,5),TKind),Block((6,6),TKind),Block((0,0),TKind))
-    ,(10,20),
-    Seq(Block((5,5),TKind),Block((6,5),TKind),Block((7,5),TKind),Block((6,6),TKind)))*/
 }
