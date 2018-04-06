@@ -52,11 +52,12 @@ object Main extends SimpleSwingApplication{
 
     def drawBlocks: Unit ={
       g setColor bluishEvenLighter
-      view.blocks foreach {b => g fill buildRect(b.pos)}
+      blocks filter {_.pos._2 < gridSize._2} foreach {b => g fill buildRect(b.pos)}
     }
 
     def drawCurrent: Unit ={
       g setColor bluishSilver
+      current filter {_.pos._2 < gridSize._2} foreach {b => g fill buildRect(b.pos)}
       view.current foreach {b => g fill buildRect(b.pos)}
     }
 

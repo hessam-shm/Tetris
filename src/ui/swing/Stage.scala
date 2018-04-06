@@ -19,7 +19,7 @@ class Stage(size: (Int,Int)) {
   val drop: GameState => GameState = (s0: GameState) =>
     Function.chain((Nil padTo(s0.gridSize._2, transit {_.moveBy(0.0,-1.0)})) ++ List(tick))(s0)
 
-  def newState(blocks: Seq[Block]): GameState = {
+  def newState(blocks: Seq[Block], gridSize: (Int,Int), kinds: Seq[PieceKind]): GameState = {
     val size = (10,20)
     def dropOffPos = (size._1 / 2.0,size._2 - 3.0)
     val p = Piece(dropOffPos,TKind)
