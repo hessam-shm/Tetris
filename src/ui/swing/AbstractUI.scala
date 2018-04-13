@@ -16,15 +16,15 @@ import scala.util.Random
 /**
   * Created by Hessam Shafiei Moqaddam on 3/19/18.
   */
-class AbstractUI {
+class AbstractUI(config: Config) {
 
   implicit val timeout = Timeout(100 millisecond)
 
-  private[this] val stage = new Stage((10,20))
+  //private[this] val stage = new Stage((10,20))
 
-  private[this] var lastKey: String = ""
+  //private[this] var lastKey: String = ""
 
-  private[this] val initialState = Stage.newState(Block(0,0),TKind) :: Nil, (10,23), randomStream(new scala.util.Random))
+  private[this] val initialState = Stage.newState(Nil, (10,23), randomStream(new scala.util.Random))
   private[this] val system = ActorSystem("TetrisSystem")
   private[this] val playerActor = system.actorOf(Props(new StageActor(initialState)), name = "playerActor")
   private[this] val timer = system.scheduler.schedule(0 millisecond, 700 millisecond, playerActor,Tick)

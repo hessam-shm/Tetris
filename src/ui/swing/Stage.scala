@@ -7,7 +7,7 @@ import scala.annotation.tailrec
   */
 class Stage(size: (Int,Int)) {
   private[this] def dropOffPos = (size._1/2.0, size._2 - 3.0)
-  private[this] var currentPiece = Piece(dropOfPos,TKind)
+  private[this] var currentPiece = Piece(dropOffPos,TKind)
   private[this] var blocks = Block((0,0),TKind) +: currentPiece.current
   def view: GameView = GameView(blocks,size,currentPiece.current)
 
