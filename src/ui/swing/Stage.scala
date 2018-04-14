@@ -5,25 +5,24 @@ import scala.annotation.tailrec
 /**
   * Created by Hessam Shafiei Moqaddam on 3/20/18.
   */
-class Stage(size: (Int,Int)) {
-  private[this] def dropOffPos = (size._1/2.0, size._2 - 3.0)
-  private[this] var currentPiece = Piece(dropOffPos,TKind)
-  private[this] var blocks = Block((0,0),TKind) +: currentPiece.current
-  def view: GameView = GameView(blocks,size,currentPiece.current)
+object Stage{
 
-  def moveLeft() = transit(_.moveBy(-1.0,0.0))
-  def moveRight() = transit(_.moveBy(1.0,0.0))
-  def rotateCW() = transit(_.rotateBy(-math.Pi/2.0))
-  val tick = transit (_.moveBy(0.0,-1.0),Function.chain(clearFullRow :: spawn :: Nil))
+  def randomStream(random: util.Random): Stream[PieceKind] = PieceKind(random.nextInt(7)) #:: randomStream(random)
+
+  val moveLeft = transit{_.moveBy(-1.0,0.0)}
+  val moveRight = transit{_.moveBy(1.0,0.0)}
+  val rotateCW = transit{_.rotateBy(-math.Pi/2.0)}
+  val tick = transit(_.moveBy(0.0,-1.0),Function.chain(clearFullRow :: attack :: spawn :: Nil))
 
   val drop: GameState => GameState = (s0: GameState) =>
     Function.chain((Nil padTo(s0.gridSize._2, transit {_.moveBy(0.0,-1.0)})) ++ List(tick))(s0)
 
+  val notifyAttack: GameState => GameState = (s0: GameState) => s0.copy(pendingAttacks = s0.pendingAttacks+1)
+
   def newState(blocks: Seq[Block], gridSize: (Int,Int), kinds: Seq[PieceKind]): GameState = {
-    val size = (10,20)
-    def dropOffPos = (size._1 / 2.0,size._2 - 3.0)
-    val p = Piece(dropOffPos,TKind)
-    GameState(blocks ++ p.current,size,p)
+    val dummy = Piece((0,0),TKind)
+    val withNext = spawn(GameState(Nil,gridSize,dummy,dummy,kinds)).copy(blocks = blocks)
+    spawn(withNext)
   }
 
   private[this] def transit(trans: Piece => Piece, onFail: GameState => GameState = identity): GameState => GameState =
@@ -42,19 +41,13 @@ class Stage(size: (Int,Int)) {
     else None
   }
 
-  /*private[this] def spawn(s: GameState): GameState = {
-    def dropOffPos = (s.gridSize._1 / 2.0,s.gridSize._2 - 3.0)
-    val p = Piece(dropOffPos,TKind)
-    s.copy(blocks = s.blocks ++ p.current, currentPiece = p)
-  }*/
-
   private[this] lazy val spawn: GameState => GameState = (s: GameState) => {
     def dropOffPos = (s.gridSize._1 / 2.0, s.gridSize._2 - 2.0)
     val s1 = s.copy(blocks = s.blocks, currentPiece = s.nextPiece.copy(pos = dropOffPos),
       nextPiece = Piece((2,1),s.kinds.head),kinds = s.kinds.tail)
-    validate(s1) map {case x => x.copy(blocks = load(x.currentPiece, x.blocks))
+    validate(s1) map {case x => x.load(x.currentPiece)
     } getOrElse{
-      s1.copy(blocks = load(s1.currentPiece,s1.blocks),status = GameOver)
+      s1.load(s1.currentPiece).copy(status = GameOver)
     }
   }
 
@@ -64,31 +57,34 @@ class Stage(size: (Int,Int)) {
       if(i < 0) s
     else if(isFullRow(i,s))
       tryRow(i-1,s.copy(blocks = (s.blocks filter {_.pos._2 < i}) ++
-      (s.blocks filter {_.pos._2 > i} map {b => b.copy(pos = (b.pos._1,b.pos._2-1))})))
+      (s.blocks filter {_.pos._2 > i} map {b => b.copy(pos = (b.pos._1,b.pos._2-1))}), lastDeleted = s.lastDeleted+1))
     else tryRow(i-1,s)
-      tryRow(s0.gridSize._2-1,s0)
+    val s1 = tryRow(s0.gridSize._2-1,s0)
+    if(s1.lastDeleted == 0) s1
+    else
+      s1.copy(lineCounts = s1.lineCounts updated (s1.lastDeleted, s1.lineCounts(s1.lastDeleted) + 1))
   }
 
+  val attackRandom = new util.Random(0L)
 
-  /*private def transformPiece(trans: Piece => Piece): this.type = {
-    validate(trans(currentPiece),
-      unload(currentPiece,blocks)) map {case (moved,unloaded) =>
-        blocks = load(moved,unloaded)
-        currentPiece = moved
+  private[this] lazy val attack: GameState => GameState = (s0: GameState) => {
+    def attackRow(s: GameState): Seq[Block] = (0 to s.gridSize._1 - 1).toSeq flatMap {x =>
+      if(attackRandom.nextBoolean) Some(Block((x,0), TKind))
+      else None
     }
-    this
-  }*/
-
-  /*private[this] def validate(p: Piece, bs: Seq[Block]): Option[(Piece,Seq[Block])] =
-    if (p.current map {_.pos} forall inBounds) Some(p,bs)
-    else None*/
-
-  /*private[this] def inBounds(pos: (Int,Int)): Boolean =
-    (pos._1 >= 0) && (pos._1 < size._1) && (pos._2 >= 0) && (pos._2 < size._2)*/
-
-  private[this] def unload(p: Piece, bs: Seq[Block]): Seq[Block] = {
-    val currentPoss = p.current map {_.pos}
-    bs filterNot {currentPoss contains _.pos}
+    @tailrec def tryAttack(s: GameState): GameState = if(s.pendingAttacks < 1) s
+    else tryAttack(s.copy(blocks = (s.blocks map {b => b.copy(pos = (b.pos._1,b.pos._2+1))} filter {
+      _.pos._2 < s.gridSize._2}) ++ attackRow(s), pendingAttacks = s.pendingAttacks - 1))
+    tryAttack(s0)
   }
-  private[this] def load(p: Piece, bs: Seq[Block]): Seq[Block] = bs ++ p.current
+
+  def toTrans(message: StageMessage): GameState => GameState = message match {
+    case MoveLeft  => moveLeft
+    case MoveRight => moveRight
+    case RotateCW  => rotateCW
+    case Tick      => tick
+    case Drop      => drop
+    case Attack    => notifyAttack
+  }
+
 }
